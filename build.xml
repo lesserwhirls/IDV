@@ -140,6 +140,7 @@ argument -Dfoo=bar) -->
         <unjar src="${libsrc}/abom.jar" dest="${tmpjardir}"/>
 
         <unjar src="${libsrc}/AppleJavaExtensions.jar" dest="${tmpjardir}"/>
+        <unjar src="${libsrc}/gson-2.2.4.jar" dest="${tmpjardir}"/>
         <jar
             basedir="${tmpjardir}"
             compress="true"
@@ -286,7 +287,7 @@ argument -Dfoo=bar) -->
 
 
     <target name="idv" depends="init">
-        <javac
+      <javac
             classpath="${classpath}"
             debug="true"
             source="${srcversion}"

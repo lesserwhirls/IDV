@@ -667,5 +667,18 @@ public interface IdvConstants {
     public static final String PREF_LARGE_REMOTE_DATA_WARN =
         "idv.largeremoterequest.warn";
 
+    /** Report Usage Stats to Unidata **/
+    public static final String PREF_REPORT_USAGE_STATS = "idv.reportusagestats";
+
+    /** Usage Stats ID **/
+    public static final String PROP_USAGE_STATS_ID = "idv.usagestatsid";
+
+    /** usage stats server **/
+    public static final String USAGE_SERVER = "http://mothership.unidata.ucar.edu/IdvUsage/";
+    public static final String USAGE_SERVER_REQID = USAGE_SERVER + "requestId";
+    public static final String USAGE_SERVER_CHECKID = USAGE_SERVER + "checkId";
+    public static final String USAGE_SERVER_STARTUP_REPORT = USAGE_SERVER + "startupReport";
+    public static final String USAGE_SERVER_CD_REPORT = USAGE_SERVER + "report";
+
 
 }

@@ -21,8 +21,8 @@
 package ucar.unidata.idv;
 
 
+import com.google.gson.Gson;
 import org.w3c.dom.Element;
-
 
 
 import ucar.unidata.data.DataCancelException;
@@ -49,17 +49,13 @@ import ucar.unidata.xml.XmlUtil;
 import visad.VisADException;
 
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 
 import java.rmi.RemoteException;
 
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Properties;
-
-
+import java.util.*;
 
 
 /**
@@ -158,7 +154,8 @@ public class ControlDescriptor {
     /** Xml &quot;label&quot; attribute name  for the control descriptor xml */
     public static final String PROP_DISPLAYNAME = "displayName";
 
-
+    /** indicates is user wants to report usage stats **/
+    private boolean report;
 
 
 
@@ -337,6 +334,9 @@ public class ControlDescriptor {
         //Add in the display:... category
         this.dataCategories.add(new DataCategory("display:" + controlId,
                 false));
+
+        // does user want to report statistics?
+        report = idv.getOkToReport();
     }
 
 
@@ -862,6 +862,8 @@ public class ControlDescriptor {
 
 
 
+        // does user want to report statistics?
+        report = viewer.getOkToReport();
 
         dataChoices = processList(dataChoices);
         final List newDataChoices = DataChoice.cloneDataChoices(dataChoices);
@@ -916,10 +918,49 @@ public class ControlDescriptor {
             initControl(theNewControl, newDataChoices, viewer, newProperties,
                         dataSelection);
         }
+
+        if (report) {
+            doReport(((DataChoice) dataChoices.get(0)));
+        }
+
         return control;
     }
 
+    private void doReport(DataChoice dc) {
 
+        Map<String,String> usageInfo = new HashMap<String,String>();
+        List dataSources = new ArrayList<DataSource>();
+        dc.getDataSources(dataSources);
+        Boolean hasDataSources = dataSources.size() >= 1;
+        DataSource ds = (DataSource) dataSources.get(0);
+        hasDataSources = ds != null;
+
+        usageInfo.put("ID", idv.usageStatsID);
+        usageInfo.put("controlID", this.getControlId());
+        usageInfo.put("Description", this.getDescription());
+        if (hasDataSources) {
+            if (ds.getDataPaths() != null) {
+                String dataPath = (String) ds.getDataPaths().get(0);
+                File testLocalFile = new File(dataPath);
+                if (testLocalFile.isFile()) {
+                    usageInfo.put("isLocal", Boolean.TRUE.toString());
+                    dataPath = testLocalFile.getName();
+                } else {
+                    usageInfo.put("isLocal", Boolean.FALSE.toString());
+                }
+                usageInfo.put("dataPath", dataPath);
+            }
+        }
+        // todo add other info, like is subset in time, is using time matching,
+        // is subset in space, is using progressive res, etc
+
+        // construct report in json format for passing to usage server
+        Gson gson = new Gson();
+        String jsonString = gson.toJson(usageInfo);
+        // todo POST json string to idv.getStateManager().USAGE_SERVER_CD_REPORT
+        // for now, just print to standard out
+        System.out.println(jsonString);
+    }
     /**
      * Initializes the {@link DisplayControl}
      *

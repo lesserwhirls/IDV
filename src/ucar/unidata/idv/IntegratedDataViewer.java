@@ -20,7 +20,7 @@
 
 package ucar.unidata.idv;
 
-
+import com.google.gson.Gson;
 import ucar.unidata.data.CacheDataSource;
 import ucar.unidata.data.DataCancelException;
 import ucar.unidata.data.DataChoice;
@@ -76,10 +76,7 @@ import java.lang.reflect.Method;
 
 import java.rmi.RemoteException;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -194,8 +191,11 @@ public class IntegratedDataViewer extends IdvBase implements ControlContext,
     /** Are we interactive */
     private boolean interactiveMode = true;
 
+    /** ID for usage stats **/
+    public String usageStatsID;
 
-
+    /** Does user want us to report stats? **/
+    private boolean report;
 
     /**
      * Parameterless constructor. Not sure if this is needed.
@@ -280,7 +280,7 @@ public class IntegratedDataViewer extends IdvBase implements ControlContext,
         }
 
 
-        //Put the default property file in the list before we parse args 
+        //Put the default property file in the list before we parse args
         getArgsManager().propertyFiles.add(
             "/ucar/unidata/idv/resources/idv.properties");
         initPropertyFiles(getArgsManager().propertyFiles);
@@ -340,6 +340,57 @@ public class IntegratedDataViewer extends IdvBase implements ControlContext,
         getJythonManager();
         getDataManager();
         getPublishManager().initPublisher();
+        report = (Boolean) stateManager.getPreferenceOrProperty(PREF_REPORT_USAGE_STATS, true);
+        setupId();
+    }
+
+    public boolean getOkToReport() {
+        return report;
+    }
+
+    private void setupId() {
+
+        // todo check if network is active and mothership is responding.
+        // check USAGE_SERVER_CHECKID
+        Boolean canReport = true;
+        if (!canReport) {
+            report = false;
+        }
+
+        // check if user would like to report usage stats
+        if (report) {
+            usageStatsID = (String) stateManager.getPreference(PROP_USAGE_STATS_ID, "");
+            if (usageStatsID.isEmpty()) {
+                //todo request id from unidata
+                // use USAGE_SERVER_REQID to get ID
+
+                // will hardcode for now
+                usageStatsID = "LALALLALALALALAL";
+                stateManager.writePreference(PROP_USAGE_STATS_ID, usageStatsID);
+            } else {
+                // if id exists, check with unidata to see if id is valid
+                // use USAGE_SERVER_CHECKID
+            }
+
+            // send basic idv info
+            Map<String, String> usageInfo = new HashMap<String, String>();
+            usageInfo.put("ID", usageStatsID);
+            usageInfo.put("osArch", System.getProperty("os.arch"));
+            usageInfo.put("idvVersion", stateManager.getVersion());
+            usageInfo.put("idvBuildDate", stateManager.getBuildDate());
+            usageInfo.put("os", System.getProperty("os.name"));
+            usageInfo.put("osVersion", System.getProperty("os.version"));
+            usageInfo.put("javaVersion", System.getProperty("java.version"));
+            usageInfo.put("javaVendor", System.getProperty("java.vendor"));
+            usageInfo.put("ncIdvVersion", LibVersionUtil.getNcidvVersion());
+            // construct report in json format for passing to usage server
+            Gson gson = new Gson();
+            String jsonString = gson.toJson(usageInfo);
+            // todo POST json string to USAGE_SERVER_STARTUP_REPORT
+            // for now, just print to standard out
+            System.out.println(jsonString);
+
+        }
     }
 
     /**
@@ -2599,6 +2650,7 @@ Misc.run(new Runnable() {
         try {
             control = descriptor.doMakeDisplay(dataChoices, this, properties,
                     dataSelection, initDisplayInThread);
+
         } catch (Throwable exp) {
             logException("doMakeControl", exp);
         }

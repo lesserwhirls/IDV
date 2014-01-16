@@ -1071,6 +1071,8 @@ public class IdvPreferenceManager extends IdvManager implements ActionListener {
               Boolean.FALSE },
             { "Show Toolbar in Windows", PREF_WINDOW_SHOWTOOLBAR,
               Boolean.TRUE },
+            { "Report Usage Statistics", PREF_REPORT_USAGE_STATS,
+                    Boolean.TRUE },
             /*
              * { "Check for Updates", InstallManager.PREF_CHECKFORNEWRELEASE,
              * Boolean.TRUE },
