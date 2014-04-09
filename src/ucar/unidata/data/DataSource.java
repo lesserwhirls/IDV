@@ -46,6 +46,7 @@ public interface DataSource {
 
     /** properties from the catalogs */
     public static final String PROP_SERVICE_HTTP = "prop.service.http";
+    public static final String PROP_SERVICE_CDMREMOTE = "prop.service.cdmremote";
 
     /** property identifier */
     public static final String PROP_SUBPROPERTIES = "prop.subproperties";

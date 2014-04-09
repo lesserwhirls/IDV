@@ -49,6 +49,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.xml.ws.http.HTTPException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -1160,11 +1161,16 @@ public class GeoGridDataSource extends GridDataSource {
             LogUtil.consoleMessage("Original error:\n" + fnfe.toString()
                                    + "\n" + LogUtil.getStackTrace(fnfe));
             throw new BadDataException("Unable to open grid:\n" + file);
+        } catch (HTTPException hex) {
+            setInError(true);
+            throw new WrapperException(
+                    "Grid data source failed making data set: " + file, hex);
         } catch (Exception exc) {
             setInError(true);
             throw new WrapperException(
                 "Grid data source failed making data set: " + file, exc);
         }
+
     }
 
     /**

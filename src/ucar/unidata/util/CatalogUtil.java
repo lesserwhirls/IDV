@@ -60,6 +60,9 @@ public class CatalogUtil {
     /** This needs to be the same as unidata.data.DataSource */
     public static final String PROP_SERVICE_HTTP = "prop.service.http";
 
+    /** This needs to be the same as unidata.data.DataSource */
+    public static final String PROP_SERVICE_CDMREMOTE = "prop.service.cdmremote";
+
     /** Property name for the url of the catalog */
     public static final String PROP_CATALOGURL = "Thredds.CatalogUrl";
 
@@ -130,6 +133,9 @@ public class CatalogUtil {
 
     /** Service type value for the OPeNDAP service */
     public static final String SERVICE_OPENDAP = "OPENDAP";
+
+    /** Service type value for the CdmRemote service */
+    public static final String SERVICE_CDMREMOTE = "CdmRemote";
 
     /** Value for the thredds catalog v0.4 */
     public static final double THREDDS_VERSION_0_4 = 0.4;
@@ -494,7 +500,7 @@ public class CatalogUtil {
         boolean typeWasNull = (type == null);
         if (type == null) {
             type = SERVICE_DODS + "|" + SERVICE_OPENDAP + "|" + SERVICE_ADDE
-                   + "|" + SERVICE_RESOLVER + "|" + SERVICE_FILE;
+                   + "|" + SERVICE_RESOLVER + "|" + SERVICE_FILE + "|" + SERVICE_CDMREMOTE;
         }
         type = type.toLowerCase();
 
@@ -926,6 +932,15 @@ public class CatalogUtil {
                 properties.put(PROP_SERVICE_HTTP, serviceUrl);
             }
         }
+        dataServiceNode = findServiceNodeForDataset(datasetNode,  /*root,*/
+                false, SERVICE_CDMREMOTE);
+        if (dataServiceNode != null) {
+            String serviceUrl = getAbsoluteUrl(dataServiceNode, urlPath);
+            if (serviceUrl != null) {
+                properties.put(PROP_SERVICE_CDMREMOTE, serviceUrl);
+            }
+        }
+
     }
 
 
