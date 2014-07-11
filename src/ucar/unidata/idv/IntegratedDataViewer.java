@@ -21,6 +21,7 @@
 package ucar.unidata.idv;
 
 
+import org.apache.commons.codec.digest.DigestUtils;
 import ucar.unidata.data.CacheDataSource;
 import ucar.unidata.data.DataCancelException;
 import ucar.unidata.data.DataChoice;
@@ -74,6 +75,7 @@ import java.io.FileInputStream;
 
 import java.lang.reflect.Method;
 
+import java.net.InetAddress;
 import java.rmi.RemoteException;
 
 import java.util.ArrayList;
@@ -717,12 +719,32 @@ public class IntegratedDataViewer extends IdvBase implements ControlContext,
             Misc.run(new Runnable() {
                 public void run() {
                     try {
+                        String version = idv.getStateManager().getVersion();
+                        if (version == null) {
+                            version = "xxx";
+                        }
+                        String useMode = (idv.getServerMode() ? "server" : "client");
+                        String interactiveMode = (idv.getInteractiveMode() ? "interactive" : "noninteractive");
+                        String hashedMachineName = DigestUtils.shaHex(InetAddress.getLocalHost().getHostName());
+                        String[] userAgentString = new String[4];
+                        String sep = " / ";
+                        userAgentString[0] = "IDV " + version;
+                        userAgentString[1] = hashedMachineName;
+                        userAgentString[2] = useMode;
+                        userAgentString[3] = interactiveMode + sep;
+                        String userAgent = StringUtil.join(sep, userAgentString);
+                        System.setProperty("http.agent", userAgent);
                         //Check for the bundles.xml
                         getInstallManager().automaticallyCheckForUpdates();
                         IOUtil.readContents(
                             "http://www.unidata.ucar.edu/software/idv/resources/bundles.xml",
                             getClass());
-                    } catch (Exception exc) {}
+                    } catch (Exception exc) {
+                        // no network connection? Not critical, so let it pass?
+                    } finally {
+                        // only use extended user agent once per session
+                        System.clearProperty("http.agent");
+                    }
                 }
             });
         }
