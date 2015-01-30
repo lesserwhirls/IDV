@@ -23,10 +23,8 @@ package ucar.unidata.idv.chooser;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 
 import ucar.unidata.data.DataManager;
 import ucar.unidata.data.DataSource;
@@ -35,35 +33,27 @@ import ucar.unidata.data.DataSource;
 
 
 import ucar.unidata.idv.*;
-
 import ucar.unidata.ui.ImageUtils;
 import ucar.unidata.ui.XmlTree;
 import ucar.unidata.util.CatalogUtil;
-
-
 import ucar.unidata.util.FileManager;
-
 import ucar.unidata.util.GuiUtils;
 import ucar.unidata.util.IOUtil;
 import ucar.unidata.util.LogUtil;
 import ucar.unidata.util.Misc;
-
 import ucar.unidata.util.StringUtil;
-
 import ucar.unidata.xml.XmlNodeList;
-
-
 import ucar.unidata.xml.XmlUtil;
 
 import java.awt.*;
-
 import java.awt.event.*;
-
 import java.io.File;
 
 
 
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -74,7 +64,8 @@ import java.util.Vector;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.tree.*;
-
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
 
 /**
  * This handles the Thredds  catalog xml for the
@@ -466,8 +457,33 @@ public class ThreddsHandler extends XmlHandler {
                 List    elements = tree.getSelectedElements();
                 boolean haveData = false;
                 for (int i = 0; (i < elements.size()) && !haveData; i++) {
+                         Element element1 = (Element)elements.get(i);
+                         // check to see if we should look one level deeper for actual
+                         // datasets (must be a catalogRef element and have an ID attribute
+                         boolean isCatalogRef = XmlUtil.isTag(element1, CatalogUtil.TAG_CATALOGREF);
+                         boolean hasId = element1.hasAttribute(CatalogUtil.ATTR_ID);
+                     if(isCatalogRef && hasId){
+                         // get catalogRef and try to read it in
+                         String catXlinkHref = element1.getAttribute(CatalogUtil.ATTR_XLINK_HREF);
+                         String catUrl = theTree.expandRelativeUrl(node, catXlinkHref);
+                         try {
+                                                        Document newDoc = readXlinkXml(catUrl);
+                                                        // find dataset nodes in the referenced catalog
+                                                        NodeList newDatasets = newDoc.getElementsByTagName(CatalogUtil.TAG_DATASET);
+                                                        int numNodes = newDatasets.getLength();
+                                                        if (numNodes > 1) {
+                                    for (int nodeNum = 0; nodeNum < numNodes - 1; nodeNum++) {
+                                        findDataset(newDatasets.item(nodeNum), element1);       
+                                    }
+                                                        } else if (numNodes == 1) {
+                                        findDataset(newDatasets.item(0), element1);
+                                }
+                         } catch (Exception e) {
+                                LogUtil.logException("Could not parse referenced catalog xml in ThreddsHandler", e);
+                                                }                        
+                     }
                     haveData =
-                        CatalogUtil.getUrlPath((Element) elements.get(i))
+                        CatalogUtil.getUrlPath(element1)
                         != null;
                 }
                 chooser.setHaveData(haveData);
@@ -549,8 +565,33 @@ public class ThreddsHandler extends XmlHandler {
     }
 
 
-
-
+    /**
+     * Find a dataset within the new dataset node that has the same ID as the
+     * old dataset node. If it is found, add a urlPath to the old dataset node
+     * and make sure it is a dataset element
+     *  
+     * @param newDatasetNode - the new dataset node
+     * @param oldDatasetNode - the old dataset node
+     */
+    private void findDataset(Node newDatasetNode, Element oldDatasetNode) {
+        // get the old ID...need to see if a new dataset contains this id
+        String idas = oldDatasetNode.getAttribute(CatalogUtil.ATTR_ID);
+        if (newDatasetNode instanceof Element) {
+                Element newDataset = (Element) newDatasetNode;
+                String newId = newDataset.getAttribute(CatalogUtil.ATTR_ID);
+            // note that we use .contains here, as the newId may have /GC 
+                // tacked onto the end of it (TDS 4.5 servers only).
+                if (newId.contains(idas)) {
+                        String newUrlPath = newDataset.getAttribute(CatalogUtil.ATTR_URLPATH);
+                        oldDatasetNode.setAttribute(CatalogUtil.ATTR_URLPATH, newUrlPath);
+                        oldDatasetNode.removeAttribute(CatalogUtil.ATTR_XLINK_HREF);
+                        // make sure this element is a Dataset element. If it is not, it will
+                        // not load into the IDV on the doLoad() call.
+                    ((Document) oldDatasetNode.getOwnerDocument()).renameNode(oldDatasetNode, 
+                                null, CatalogUtil.TAG_DATASET); 
+                }
+        }
+    }
 
     /**
      * update the tree in the swing thread
